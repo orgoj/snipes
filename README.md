@@ -41,11 +41,14 @@ Snipes is a maze-based top-down shooter where you navigate procedurally-generate
 - 🎮 **Twin-stick Controls** - Move and shoot in different directions simultaneously
 - 🚀 **Speed Boost Mechanic** - Temporary speed increase to escape danger
 - 📊 **234 Difficulty Levels** - From A1 (easiest) to Z9 (hardest)
+- 👥 **2-Player Co-op Mode** - WebRTC peer-to-peer multiplayer (no server needed!)
 - 💾 **LocalStorage** - Saves settings and high scores
 - 🧪 **Comprehensive Testing** - 24 unit tests with Vitest
 - 🔧 **Session-Start Hook** - Auto-setup for Claude Code on the web
 
 ## 🕹️ Controls
+
+### Solo Mode & Multiplayer (Both Players)
 
 | Action | Keys |
 |--------|------|
@@ -55,6 +58,13 @@ Snipes is a maze-based top-down shooter where you navigate procedurally-generate
 | **Pause** | ESC |
 
 **Pro Tip:** You can move and shoot in different directions at the same time!
+
+### Multiplayer Co-op Mode
+
+- **Player 1 (Host)**: Arrow Keys (move) + WASD (shoot) + Space (boost)
+- **Player 2 (Guest)**: Arrow Keys (move) + WASD (shoot) + Space (boost)
+
+Both players use the same control scheme and work together to destroy all hives!
 
 ## 🎯 Objective
 
@@ -103,6 +113,42 @@ npm run build
 npm run preview
 ```
 
+## 👥 Multiplayer Co-op Mode
+
+Play with a friend using peer-to-peer WebRTC connection (no server needed!).
+
+### How to Play
+
+1. **Host**: Click "CO-OP MODE" → "HOST GAME"
+2. **Share** the room code with your friend
+3. **Guest**: Click "CO-OP MODE" → "JOIN GAME" and enter the room code
+4. **Play Together**: Destroy all hives and survive!
+
+### Features
+
+- ✅ Peer-to-peer connection (WebRTC)
+- ✅ No server required
+- ✅ Real-time state synchronization
+- ✅ Both players use same control scheme
+- ✅ Shared objective and score
+- ✅ Game over if either player dies
+- ✅ Disconnect detection with alerts
+
+### Technical Details
+
+- Uses PeerJS for WebRTC abstraction
+- Host runs authoritative game simulation
+- Guest sends inputs, receives game state
+- STUN servers for NAT traversal
+- ~20 FPS state updates
+
+### Known Limitations
+
+- Requires working NAT traversal (~80-90% success rate)
+- Uses default PeerJS cloud server (best-effort availability)
+- No reconnection on disconnect (yet)
+- Optimized for low-latency connections
+
 ## 🛠️ Tech Stack
 
 - **Framework:** React 19 + TypeScript 5.9
@@ -111,6 +157,7 @@ npm run preview
 - **Linting:** ESLint 9 + Prettier 3
 - **Styling:** CSS3 with CRT effects
 - **State Management:** React hooks + immutable updates
+- **Multiplayer:** PeerJS (WebRTC) for P2P connections
 - **Deployment:** GitHub Pages + GitHub Actions
 
 ## 📁 Project Structure
@@ -234,16 +281,17 @@ npm run build
 - [x] Player speed boost working correctly
 - [x] React purity compliance
 - [x] Removed unimplemented difficulty features
+- [x] 2-player co-op mode (WebRTC peer-to-peer) 🎉
 
 ### Roadmap 🚧
 - [ ] Visual feedback (explosions, muzzle flash, hit effects)
 - [ ] Sound effects (retro beeps and boops)
+- [ ] Multiplayer improvements (reconnection, TURN server, delta compression)
 - [ ] Maze connectivity validation
 - [ ] Better AI pathfinding (A* algorithm)
 - [ ] Keyboard menu navigation
 - [ ] Higher test coverage (target: 80%)
 - [ ] Accessibility improvements (colorblind mode, screen reader)
-- [ ] 2-player co-op mode (WebRTC peer-to-peer)
 
 ## 🐛 Bug Reports
 
