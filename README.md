@@ -88,13 +88,13 @@ Both players use the same control scheme and work together to destroy all hives!
 
 ### Play Online
 
-Visit: `https://[username].github.io/snipes/`
+Visit: `https://orgoj.github.io/snipes/`
 
 ### Run Locally
 
 ```bash
 # Clone the repository
-git clone https://github.com/[username]/snipes.git
+git clone https://github.com/orgoj/snipes.git
 cd snipes
 
 # Install dependencies
@@ -316,8 +316,8 @@ This implementation: MIT License
 ## 🔗 Links
 
 - [Original Snipes on Wikipedia](https://en.wikipedia.org/wiki/Snipes_(video_game))
-- [Play Online](#) (Replace with your GitHub Pages URL)
-- [Report Issues](#) (Replace with your GitHub Issues URL)
+- [Play Online](https://orgoj.github.io/snipes/)
+- [Report Issues](https://github.com/orgoj/snipes/issues)
 
 ---
 
