@@ -23,9 +23,15 @@ export default function Terminal({ gameState, colorScheme = 'green' }: TerminalP
           <span>{gameState.score}</span>
         </div>
         <div className="hud-item">
-          <span>LIVES:</span>
+          <span>P1 LIVES:</span>
           <span>{'♥'.repeat(gameState.player.lives)}</span>
         </div>
+        {gameState.player2 && (
+          <div className="hud-item">
+            <span>P2 LIVES:</span>
+            <span>{'♥'.repeat(gameState.player2.lives)}</span>
+          </div>
+        )}
         <div className="hud-item">
           <span>LEVEL:</span>
           <span>{gameState.difficulty.level}</span>

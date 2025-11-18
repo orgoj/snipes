@@ -37,6 +37,14 @@ export class MultiplayerManager {
         ],
       },
     })
+
+    // Add error handler for peer initialization
+    this.peer.on('error', (error) => {
+      console.error('PeerJS error:', error)
+      if (this.onDisconnected) {
+        this.onDisconnected()
+      }
+    })
   }
 
   // Host creates a room and waits for guest
@@ -64,7 +72,7 @@ export class MultiplayerManager {
 
     return new Promise((resolve, reject) => {
       this.peer!.on('open', () => {
-        const peerId = this.decodRoomCode(roomCode)
+        const peerId = this.decodeRoomCode(roomCode)
         this.connection = this.peer!.connect(peerId)
         this.setupConnection()
         resolve()
@@ -150,18 +158,15 @@ export class MultiplayerManager {
     this.onDisconnected = callback
   }
 
-  // Generate 6-digit room code from peer ID
+  // Use peer ID directly as room code (no hashing needed)
   private generateRoomCode(peerId: string): string {
-    // Convert peer ID to 6-digit code
-    const hash = peerId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-    const code = (hash % 900000) + 100000 // 6-digit number
-    return code.toString()
+    // Return peer ID directly - PeerJS IDs are short enough to share
+    return peerId.toUpperCase()
   }
 
-  private decodRoomCode(roomCode: string): string {
-    // In real implementation, this would need a signaling server
-    // For simplicity, we'll use the peer ID directly as "room code"
-    return roomCode
+  private decodeRoomCode(roomCode: string): string {
+    // Room code IS the peer ID (just uppercased by UI)
+    return roomCode.toLowerCase()
   }
 
   disconnect() {

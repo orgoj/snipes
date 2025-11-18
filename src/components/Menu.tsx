@@ -6,6 +6,7 @@ interface MenuProps {
   onStartGame: (difficulty: string) => void
   onHostGame?: (difficulty: string) => void
   onJoinGame?: (roomCode: string) => void
+  onCancelWait?: () => void
   roomCode?: string | null
   isWaitingForPlayer?: boolean
 }
@@ -14,6 +15,7 @@ export default function Menu({
   onStartGame,
   onHostGame,
   onJoinGame,
+  onCancelWait,
   roomCode,
   isWaitingForPlayer = false
 }: MenuProps) {
@@ -59,6 +61,11 @@ export default function Menu({
           <p style={{ fontSize: '12px', marginTop: '10px', opacity: 0.7 }}>
             Share this code with your friend!
           </p>
+        </div>
+        <div className="menu-options">
+          <button className="menu-button" onClick={onCancelWait}>
+            CANCEL
+          </button>
         </div>
       </div>
     )

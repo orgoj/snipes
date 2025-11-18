@@ -44,6 +44,18 @@ export default function Game() {
     [settings]
   )
 
+  const returnToMenu = useCallback(() => {
+    // Cleanup multiplayer connection
+    if (multiplayerManagerRef.current) {
+      multiplayerManagerRef.current.disconnect()
+      multiplayerManagerRef.current = null
+    }
+    setScreen('menu')
+    setGameState(null)
+    setRoomCode(null)
+    setIsWaitingForPlayer(false)
+  }, [])
+
   const hostGame = useCallback(
     async (difficulty: string) => {
       try {
@@ -81,12 +93,18 @@ export default function Game() {
             return newState
           })
         })
+
+        // Handle disconnection
+        manager.onConnectionClosed(() => {
+          alert('Player 2 disconnected!')
+          returnToMenu()
+        })
       } catch (error) {
         console.error('Failed to host game:', error)
         alert('Failed to create game. Please try again.')
       }
     },
-    []
+    [returnToMenu]
   )
 
   const joinGame = useCallback(
@@ -110,6 +128,12 @@ export default function Game() {
           }
         })
 
+        // Handle disconnection
+        manager.onConnectionClosed(() => {
+          alert('Host disconnected!')
+          returnToMenu()
+        })
+
         setScreen('playing')
         lastUpdateRef.current = Date.now()
       } catch (error) {
@@ -117,24 +141,15 @@ export default function Game() {
         alert('Failed to connect. Check the room code and try again.')
       }
     },
-    [screen]
+    [screen, returnToMenu]
   )
 
-  const returnToMenu = useCallback(() => {
-    // Cleanup multiplayer connection
-    if (multiplayerManagerRef.current) {
-      multiplayerManagerRef.current.disconnect()
-      multiplayerManagerRef.current = null
-    }
-    setScreen('menu')
-    setGameState(null)
-    setRoomCode(null)
-    setIsWaitingForPlayer(false)
-  }, [])
-
-  // Game loop
+  // Game loop (ONLY for host and solo mode - guest receives state from host)
   useEffect(() => {
     if (screen !== 'playing' || !gameState) return
+
+    // Guest doesn't simulate game - only renders received state
+    if (gameState.gameMode === GameMode.COOP_GUEST) return
 
     // Initialize timer on first run
     if (lastUpdateRef.current === 0) {
@@ -192,15 +207,14 @@ export default function Game() {
         setGameState((prev) => (prev ? shootBullet(prev, direction) : null))
       }
 
-      // Process Player 2 (if guest or local multiplayer)
+      // Guest: Send Player 2 inputs to host (using primary control scheme)
       if (gameState.gameMode === GameMode.COOP_GUEST && multiplayerManagerRef.current) {
-        // Guest: Send inputs to host
-        const p2MoveKeys = Array.from(player2MoveKeysRef.current)
-        const p2ShootKeys = Array.from(player2ShootKeysRef.current)
-        if (p2MoveKeys.length > 0 || p2ShootKeys.length > 0) {
-          const moveDir = p2MoveKeys.length > 0 ? getDirectionFromPlayer2Keys(p2MoveKeys) : Direction.NONE
-          const shootDir = p2ShootKeys.length > 0 ? getShootDirectionFromPlayer2Keys(p2ShootKeys) : Direction.NONE
-          const boosting = p2MoveKeys.includes('shift')
+        const guestMoveKeys = Array.from(moveKeysRef.current)
+        const guestShootKeys = Array.from(shootKeysRef.current)
+        if (guestMoveKeys.length > 0 || guestShootKeys.length > 0) {
+          const moveDir = guestMoveKeys.length > 0 ? getDirectionFromKeys(guestMoveKeys) : Direction.NONE
+          const shootDir = guestShootKeys.length > 0 ? getShootDirectionFromKeys(guestShootKeys) : Direction.NONE
+          const boosting = guestMoveKeys.includes(' ')
           multiplayerManagerRef.current.sendPlayerInput(moveDir, shootDir, boosting)
         }
       }
@@ -269,6 +283,16 @@ export default function Game() {
     }
   }, [screen, returnToMenu])
 
+  // Cleanup multiplayer connection on component unmount
+  useEffect(() => {
+    return () => {
+      if (multiplayerManagerRef.current) {
+        multiplayerManagerRef.current.disconnect()
+        multiplayerManagerRef.current = null
+      }
+    }
+  }, [])
+
   return (
     <div className="terminal-container">
       {screen === 'menu' && (
@@ -276,6 +300,7 @@ export default function Game() {
           onStartGame={startGame}
           onHostGame={hostGame}
           onJoinGame={joinGame}
+          onCancelWait={returnToMenu}
           roomCode={roomCode}
           isWaitingForPlayer={isWaitingForPlayer}
         />
@@ -286,6 +311,7 @@ export default function Game() {
           onStartGame={startGame}
           onHostGame={hostGame}
           onJoinGame={joinGame}
+          onCancelWait={returnToMenu}
           roomCode={roomCode}
           isWaitingForPlayer={isWaitingForPlayer}
         />
@@ -375,42 +401,6 @@ function getShootDirectionFromKeys(keys: string[]): Direction {
   if (s) return Direction.DOWN
   if (a) return Direction.LEFT
   if (d) return Direction.RIGHT
-
-  return Direction.NONE
-}
-
-function getDirectionFromPlayer2Keys(keys: string[]): Direction {
-  const i = keys.includes('i')
-  const k = keys.includes('k')
-  const j = keys.includes('j')
-  const l = keys.includes('l')
-
-  if (i && j) return Direction.UP_LEFT
-  if (i && l) return Direction.UP_RIGHT
-  if (k && j) return Direction.DOWN_LEFT
-  if (k && l) return Direction.DOWN_RIGHT
-  if (i) return Direction.UP
-  if (k) return Direction.DOWN
-  if (j) return Direction.LEFT
-  if (l) return Direction.RIGHT
-
-  return Direction.NONE
-}
-
-function getShootDirectionFromPlayer2Keys(keys: string[]): Direction {
-  const t = keys.includes('t')
-  const g = keys.includes('g')
-  const f = keys.includes('f')
-  const h = keys.includes('h')
-
-  if (t && f) return Direction.UP_LEFT
-  if (t && h) return Direction.UP_RIGHT
-  if (g && f) return Direction.DOWN_LEFT
-  if (g && h) return Direction.DOWN_RIGHT
-  if (t) return Direction.UP
-  if (g) return Direction.DOWN
-  if (f) return Direction.LEFT
-  if (h) return Direction.RIGHT
 
   return Direction.NONE
 }

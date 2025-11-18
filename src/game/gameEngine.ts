@@ -1,4 +1,4 @@
-import type { GameState, Player, Snipe, Ghost, Hive, Bullet, GameMode } from './types'
+import type { GameState, Player, Snipe, Ghost, Hive, Bullet, GameMode, Position } from './types'
 import { EntityType, Direction, GameMode as GameModeEnum } from './types'
 import { generateMaze, isWalkable, findEmptyPosition } from './mazeGenerator'
 import { parseDifficultyLevel } from './difficulty'
@@ -238,16 +238,34 @@ function updateHives(state: GameState, deltaTime: number): GameState {
   return { ...newState, hives: newHives }
 }
 
+function getNearestPlayer(state: GameState, from: Position): Position {
+  // Find nearest alive player
+  const dist1 = Math.sqrt(
+    Math.pow(state.player.pos.x - from.x, 2) + Math.pow(state.player.pos.y - from.y, 2)
+  )
+
+  if (!state.player2) {
+    return state.player.pos
+  }
+
+  const dist2 = Math.sqrt(
+    Math.pow(state.player2.pos.x - from.x, 2) + Math.pow(state.player2.pos.y - from.y, 2)
+  )
+
+  return dist1 <= dist2 ? state.player.pos : state.player2.pos
+}
+
 function updateSnipes(state: GameState, deltaTime: number): GameState {
   const moveInterval = 1000 / state.difficulty.snipeSpeed
 
   const newSnipes = state.snipes.map((snipe) => {
     const newSnipe = { ...snipe, moveTimer: snipe.moveTimer + deltaTime, shootTimer: snipe.shootTimer + deltaTime }
 
-    // Move towards player
+    // Move towards nearest player
     if (newSnipe.moveTimer >= moveInterval) {
-      const dx = state.player.pos.x - snipe.pos.x
-      const dy = state.player.pos.y - snipe.pos.y
+      const targetPos = getNearestPlayer(state, snipe.pos)
+      const dx = targetPos.x - snipe.pos.x
+      const dy = targetPos.y - snipe.pos.y
 
       const newPos = { ...snipe.pos }
       if (Math.abs(dx) > Math.abs(dy)) {
@@ -265,15 +283,16 @@ function updateSnipes(state: GameState, deltaTime: number): GameState {
       newSnipe.moveTimer = 0
     }
 
-    // Shoot at player
+    // Shoot at nearest player
     if (newSnipe.shootTimer >= state.difficulty.snipeShootRate) {
-      const dx = state.player.pos.x - snipe.pos.x
-      const dy = state.player.pos.y - snipe.pos.y
+      const targetPos = getNearestPlayer(state, snipe.pos)
+      const dx = targetPos.x - snipe.pos.x
+      const dy = targetPos.y - snipe.pos.y
       const distance = Math.sqrt(dx * dx + dy * dy)
 
       if (distance < 10) {
         // Only shoot if close enough
-        const dir = getDirectionTowards(snipe.pos, state.player.pos)
+        const dir = getDirectionTowards(snipe.pos, targetPos)
         const bullet: Bullet = {
           id: `bullet-${Date.now()}-${Math.random()}`,
           pos: { ...snipe.pos },
@@ -311,8 +330,9 @@ function updateGhosts(state: GameState, deltaTime: number): GameState {
       }
 
       if (newGhost.moveTimer >= moveInterval) {
-        const dx = state.player.pos.x - ghost.pos.x
-        const dy = state.player.pos.y - ghost.pos.y
+        const targetPos = getNearestPlayer(state, ghost.pos)
+        const dx = targetPos.x - ghost.pos.x
+        const dy = targetPos.y - ghost.pos.y
 
         const newPos = { ...ghost.pos }
         if (Math.abs(dx) > Math.abs(dy)) {
@@ -339,6 +359,7 @@ function updateBullets(state: GameState): GameState {
   const newGhosts = [...state.ghosts]
   const newHives = [...state.hives]
   const newPlayer = { ...state.player }
+  const newPlayer2 = state.player2 ? { ...state.player2 } : null
 
   for (const bullet of state.bullets) {
     const newPos = getNextPosition(bullet.pos, bullet.dir)
@@ -381,9 +402,15 @@ function updateBullets(state: GameState): GameState {
         continue // Bullet destroyed
       }
     } else {
-      // Enemy bullet hits player
+      // Enemy bullet hits player 1
       if (newPos.x === state.player.pos.x && newPos.y === state.player.pos.y) {
         newPlayer.lives--
+        continue // Bullet destroyed
+      }
+
+      // Enemy bullet hits player 2
+      if (newPlayer2 && newPos.x === newPlayer2.pos.x && newPos.y === newPlayer2.pos.y) {
+        newPlayer2.lives--
         continue // Bullet destroyed
       }
     }
@@ -399,12 +426,18 @@ function updateBullets(state: GameState): GameState {
     ghosts: newGhosts,
     hives: newHives,
     player: newPlayer,
+    player2: newPlayer2,
   }
 }
 
 function checkGameConditions(state: GameState): GameState {
-  // Check if player died
+  // Check if player 1 died
   if (state.player.lives <= 0) {
+    return { ...state, gameOver: true }
+  }
+
+  // Check if player 2 died (in multiplayer mode)
+  if (state.player2 && state.player2.lives <= 0) {
     return { ...state, gameOver: true }
   }
 
