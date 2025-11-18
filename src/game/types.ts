@@ -39,7 +39,7 @@ export const Direction = {
 export type Direction = (typeof Direction)[keyof typeof Direction]
 
 export interface Player extends Entity {
-  type: typeof EntityType.PLAYER
+  type: typeof EntityType.PLAYER | typeof EntityType.PLAYER2
   lives: number
   speed: number
   boosting: boolean

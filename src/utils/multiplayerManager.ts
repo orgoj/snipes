@@ -1,5 +1,6 @@
-import Peer, { DataConnection } from 'peerjs'
-import type { GameState, Position, Direction } from '../game/types'
+import Peer from 'peerjs'
+import type { DataConnection } from 'peerjs'
+import type { GameState, Direction } from '../game/types'
 
 export interface PlayerInput {
   type: 'input'
@@ -156,9 +157,6 @@ export class MultiplayerManager {
     const code = (hash % 900000) + 100000 // 6-digit number
     return code.toString()
   }
-
-  // Decode room code back to peer ID (stored in memory)
-  private roomCodeToPeerId: Map<string, string> = new Map()
 
   private decodRoomCode(roomCode: string): string {
     // In real implementation, this would need a signaling server

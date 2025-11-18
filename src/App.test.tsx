@@ -10,6 +10,6 @@ describe('App', () => {
 
   it('shows start game button', () => {
     render(<App />)
-    expect(screen.getByText(/START GAME/i)).toBeInTheDocument()
+    expect(screen.getByText(/START SOLO GAME/i)).toBeInTheDocument()
   })
 })

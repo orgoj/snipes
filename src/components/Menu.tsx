@@ -5,7 +5,7 @@ import './Terminal.css'
 interface MenuProps {
   onStartGame: (difficulty: string) => void
   onHostGame?: (difficulty: string) => void
-  onJoinGame?: (roomCode: string, difficulty: string) => void
+  onJoinGame?: (roomCode: string) => void
   roomCode?: string | null
   isWaitingForPlayer?: boolean
 }
@@ -37,7 +37,7 @@ export default function Menu({
 
   const handleJoinGame = () => {
     if (onJoinGame && joinRoomCode) {
-      onJoinGame(joinRoomCode, selectedDifficulty)
+      onJoinGame(joinRoomCode)
     }
   }
 

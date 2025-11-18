@@ -1,35 +1,135 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { GameState } from '../game/types'
-import { Direction } from '../game/types'
-import { createInitialGameState, movePlayer, shootBullet, updateGame } from '../game/gameEngine'
+import { Direction, GameMode } from '../game/types'
+import {
+  createInitialGameState,
+  movePlayer,
+  movePlayer2,
+  shootBullet,
+  shootBulletPlayer2,
+  updateGame,
+} from '../game/gameEngine'
 import { saveSettings, loadSettings, saveHighScore } from '../utils/storage'
+import { MultiplayerManager } from '../utils/multiplayerManager'
 import Terminal from './Terminal'
 import Menu from './Menu'
 import './Terminal.css'
 
-type GameScreen = 'menu' | 'playing' | 'paused' | 'gameOver' | 'won'
+type GameScreen = 'menu' | 'playing' | 'paused' | 'gameOver' | 'won' | 'waitingForPlayer'
 
 export default function Game() {
   const [screen, setScreen] = useState<GameScreen>('menu')
   const [gameState, setGameState] = useState<GameState | null>(null)
   const [settings, setSettings] = useState(loadSettings())
+  const [roomCode, setRoomCode] = useState<string | null>(null)
+  const [isWaitingForPlayer, setIsWaitingForPlayer] = useState(false)
+
   const lastUpdateRef = useRef<number>(0)
   const moveKeysRef = useRef<Set<string>>(new Set())
   const shootKeysRef = useRef<Set<string>>(new Set())
+  const player2MoveKeysRef = useRef<Set<string>>(new Set())
+  const player2ShootKeysRef = useRef<Set<string>>(new Set())
+  const multiplayerManagerRef = useRef<MultiplayerManager | null>(null)
 
-  const startGame = useCallback((difficulty: string) => {
-    const newState = createInitialGameState(80, 40, difficulty)
-    setGameState(newState)
-    setScreen('playing')
-    lastUpdateRef.current = Date.now()
-    const newSettings = { ...settings, difficulty }
-    setSettings(newSettings)
-    saveSettings(newSettings)
-  }, [settings])
+  const startGame = useCallback(
+    (difficulty: string) => {
+      const newState = createInitialGameState(80, 40, difficulty, GameMode.SOLO)
+      setGameState(newState)
+      setScreen('playing')
+      lastUpdateRef.current = Date.now()
+      const newSettings = { ...settings, difficulty }
+      setSettings(newSettings)
+      saveSettings(newSettings)
+    },
+    [settings]
+  )
+
+  const hostGame = useCallback(
+    async (difficulty: string) => {
+      try {
+        // Create multiplayer manager
+        const manager = new MultiplayerManager()
+        multiplayerManagerRef.current = manager
+
+        // Host game and get room code
+        const code = await manager.hostGame(() => {
+          // On connected callback
+          console.log('Player 2 connected!')
+          setIsWaitingForPlayer(false)
+          const newState = createInitialGameState(80, 40, difficulty, GameMode.COOP_HOST)
+          setGameState(newState)
+          setScreen('playing')
+          lastUpdateRef.current = Date.now()
+        })
+
+        setRoomCode(code)
+        setIsWaitingForPlayer(true)
+        setScreen('waitingForPlayer')
+
+        // Setup state sync (host sends state to guest)
+        manager.onPlayer2Input((input) => {
+          // Handle player 2 input from guest
+          setGameState((prev) => {
+            if (!prev) return null
+            let newState = prev
+            if (input.moveDirection !== Direction.NONE) {
+              newState = movePlayer2(newState, input.moveDirection, input.boosting)
+            }
+            if (input.shootDirection !== Direction.NONE) {
+              newState = shootBulletPlayer2(newState, input.shootDirection)
+            }
+            return newState
+          })
+        })
+      } catch (error) {
+        console.error('Failed to host game:', error)
+        alert('Failed to create game. Please try again.')
+      }
+    },
+    []
+  )
+
+  const joinGame = useCallback(
+    async (code: string) => {
+      try {
+        // Create multiplayer manager
+        const manager = new MultiplayerManager()
+        multiplayerManagerRef.current = manager
+
+        // Join game
+        await manager.joinGame(code, () => {
+          // On connected callback
+          console.log('Connected to host!')
+        })
+
+        // Setup state receiving (guest receives state from host)
+        manager.onGameStateUpdate((state) => {
+          setGameState(state)
+          if (screen !== 'playing') {
+            setScreen('playing')
+          }
+        })
+
+        setScreen('playing')
+        lastUpdateRef.current = Date.now()
+      } catch (error) {
+        console.error('Failed to join game:', error)
+        alert('Failed to connect. Check the room code and try again.')
+      }
+    },
+    [screen]
+  )
 
   const returnToMenu = useCallback(() => {
+    // Cleanup multiplayer connection
+    if (multiplayerManagerRef.current) {
+      multiplayerManagerRef.current.disconnect()
+      multiplayerManagerRef.current = null
+    }
     setScreen('menu')
     setGameState(null)
+    setRoomCode(null)
+    setIsWaitingForPlayer(false)
   }, [])
 
   // Game loop
@@ -60,6 +160,11 @@ export default function Game() {
           })
         }
 
+        // Host: Send state to guest
+        if (newState.gameMode === GameMode.COOP_HOST && multiplayerManagerRef.current) {
+          multiplayerManagerRef.current.sendGameState(newState)
+        }
+
         return newState
       })
     }, 50) // ~20 FPS game loop
@@ -85,6 +190,19 @@ export default function Game() {
       if (shootKeys.length > 0) {
         const direction = getShootDirectionFromKeys(shootKeys)
         setGameState((prev) => (prev ? shootBullet(prev, direction) : null))
+      }
+
+      // Process Player 2 (if guest or local multiplayer)
+      if (gameState.gameMode === GameMode.COOP_GUEST && multiplayerManagerRef.current) {
+        // Guest: Send inputs to host
+        const p2MoveKeys = Array.from(player2MoveKeysRef.current)
+        const p2ShootKeys = Array.from(player2ShootKeysRef.current)
+        if (p2MoveKeys.length > 0 || p2ShootKeys.length > 0) {
+          const moveDir = p2MoveKeys.length > 0 ? getDirectionFromPlayer2Keys(p2MoveKeys) : Direction.NONE
+          const shootDir = p2ShootKeys.length > 0 ? getShootDirectionFromPlayer2Keys(p2ShootKeys) : Direction.NONE
+          const boosting = p2MoveKeys.includes('shift')
+          multiplayerManagerRef.current.sendPlayerInput(moveDir, shootDir, boosting)
+        }
       }
     }, gameState.player.boosting ? 50 : 100) // 2x faster when boosting
 
@@ -120,12 +238,26 @@ export default function Game() {
         e.preventDefault()
         shootKeysRef.current.add(key)
       }
+
+      // Player 2 movement keys (IJKL)
+      if (['i', 'j', 'k', 'l', 'shift'].includes(key)) {
+        e.preventDefault()
+        player2MoveKeysRef.current.add(key)
+      }
+
+      // Player 2 shooting keys (TFGH)
+      if (['t', 'f', 'g', 'h'].includes(key)) {
+        e.preventDefault()
+        player2ShootKeysRef.current.add(key)
+      }
     }
 
     const handleKeyUp = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase()
       moveKeysRef.current.delete(key)
       shootKeysRef.current.delete(key)
+      player2MoveKeysRef.current.delete(key)
+      player2ShootKeysRef.current.delete(key)
     }
 
     window.addEventListener('keydown', handleKeyDown)
@@ -139,7 +271,25 @@ export default function Game() {
 
   return (
     <div className="terminal-container">
-      {screen === 'menu' && <Menu onStartGame={startGame} />}
+      {screen === 'menu' && (
+        <Menu
+          onStartGame={startGame}
+          onHostGame={hostGame}
+          onJoinGame={joinGame}
+          roomCode={roomCode}
+          isWaitingForPlayer={isWaitingForPlayer}
+        />
+      )}
+
+      {screen === 'waitingForPlayer' && (
+        <Menu
+          onStartGame={startGame}
+          onHostGame={hostGame}
+          onJoinGame={joinGame}
+          roomCode={roomCode}
+          isWaitingForPlayer={isWaitingForPlayer}
+        />
+      )}
 
       {screen === 'playing' && gameState && <Terminal gameState={gameState} colorScheme={settings.colorScheme} />}
 
@@ -225,6 +375,42 @@ function getShootDirectionFromKeys(keys: string[]): Direction {
   if (s) return Direction.DOWN
   if (a) return Direction.LEFT
   if (d) return Direction.RIGHT
+
+  return Direction.NONE
+}
+
+function getDirectionFromPlayer2Keys(keys: string[]): Direction {
+  const i = keys.includes('i')
+  const k = keys.includes('k')
+  const j = keys.includes('j')
+  const l = keys.includes('l')
+
+  if (i && j) return Direction.UP_LEFT
+  if (i && l) return Direction.UP_RIGHT
+  if (k && j) return Direction.DOWN_LEFT
+  if (k && l) return Direction.DOWN_RIGHT
+  if (i) return Direction.UP
+  if (k) return Direction.DOWN
+  if (j) return Direction.LEFT
+  if (l) return Direction.RIGHT
+
+  return Direction.NONE
+}
+
+function getShootDirectionFromPlayer2Keys(keys: string[]): Direction {
+  const t = keys.includes('t')
+  const g = keys.includes('g')
+  const f = keys.includes('f')
+  const h = keys.includes('h')
+
+  if (t && f) return Direction.UP_LEFT
+  if (t && h) return Direction.UP_RIGHT
+  if (g && f) return Direction.DOWN_LEFT
+  if (g && h) return Direction.DOWN_RIGHT
+  if (t) return Direction.UP
+  if (g) return Direction.DOWN
+  if (f) return Direction.LEFT
+  if (h) return Direction.RIGHT
 
   return Direction.NONE
 }
