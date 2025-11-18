@@ -4,7 +4,7 @@ import './Terminal.css'
 
 interface TerminalProps {
   gameState: GameState | null
-  colorScheme?: 'green' | 'amber' | 'white'
+  colorScheme?: 'green' | 'amber' | 'white' | 'vga'
 }
 
 export default function Terminal({ gameState, colorScheme = 'green' }: TerminalProps) {

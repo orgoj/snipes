@@ -82,6 +82,13 @@
     0 0 10px #ffffff;
 }
 
+.screen.vga {
+  color: #ffff55;
+  background: #0000aa;
+  text-shadow: none;
+  font-weight: bold;
+}
+
 .hud {
   font-family: 'DOS', 'Courier New', monospace;
   color: #00ff00;

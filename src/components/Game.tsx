@@ -56,6 +56,12 @@ export default function Game() {
     setIsWaitingForPlayer(false)
   }, [])
 
+  const handleColorSchemeChange = useCallback((scheme: 'green' | 'amber' | 'white' | 'vga') => {
+    const newSettings = { ...settings, colorScheme: scheme }
+    setSettings(newSettings)
+    saveSettings(newSettings)
+  }, [settings])
+
   const hostGame = useCallback(
     async (difficulty: string) => {
       try {
@@ -306,6 +312,8 @@ export default function Game() {
           onCancelWait={returnToMenu}
           roomCode={roomCode}
           isWaitingForPlayer={isWaitingForPlayer}
+          colorScheme={settings.colorScheme}
+          onColorSchemeChange={handleColorSchemeChange}
         />
       )}
 
@@ -317,6 +325,8 @@ export default function Game() {
           onCancelWait={returnToMenu}
           roomCode={roomCode}
           isWaitingForPlayer={isWaitingForPlayer}
+          colorScheme={settings.colorScheme}
+          onColorSchemeChange={handleColorSchemeChange}
         />
       )}
 
