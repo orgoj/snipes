@@ -16,7 +16,7 @@ export function generateMaze(width: number, height: number, seed?: number): Enti
   }
 
   // Simple pseudo-random number generator (if seed provided)
-  let rng = seed !== undefined ? seededRandom(seed) : Math.random
+  const rng = seed !== undefined ? seededRandom(seed) : Math.random
 
   // Add random interior walls (corridors style)
   const wallDensity = 0.15

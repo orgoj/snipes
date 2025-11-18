@@ -171,14 +171,14 @@ function updateSnipes(state: GameState, deltaTime: number): GameState {
   const moveInterval = 1000 / state.difficulty.snipeSpeed
 
   const newSnipes = state.snipes.map((snipe) => {
-    let newSnipe = { ...snipe, moveTimer: snipe.moveTimer + deltaTime, shootTimer: snipe.shootTimer + deltaTime }
+    const newSnipe = { ...snipe, moveTimer: snipe.moveTimer + deltaTime, shootTimer: snipe.shootTimer + deltaTime }
 
     // Move towards player
     if (newSnipe.moveTimer >= moveInterval) {
       const dx = state.player.pos.x - snipe.pos.x
       const dy = state.player.pos.y - snipe.pos.y
 
-      let newPos = { ...snipe.pos }
+      const newPos = { ...snipe.pos }
       if (Math.abs(dx) > Math.abs(dy)) {
         newPos.x += dx > 0 ? 1 : -1
       } else if (dy !== 0) {
@@ -226,13 +226,13 @@ function updateGhosts(state: GameState, deltaTime: number): GameState {
   const moveInterval = 500 // Ghosts move slower
 
   const newGhosts = state.ghosts.map((ghost) => {
-    let newGhost = { ...ghost, moveTimer: ghost.moveTimer + deltaTime }
+    const newGhost = { ...ghost, moveTimer: ghost.moveTimer + deltaTime }
 
     if (newGhost.moveTimer >= moveInterval) {
       const dx = state.player.pos.x - ghost.pos.x
       const dy = state.player.pos.y - ghost.pos.y
 
-      let newPos = { ...ghost.pos }
+      const newPos = { ...ghost.pos }
       if (Math.abs(dx) > Math.abs(dy)) {
         newPos.x += dx > 0 ? 1 : -1
       } else if (dy !== 0) {
@@ -252,10 +252,10 @@ function updateGhosts(state: GameState, deltaTime: number): GameState {
 
 function updateBullets(state: GameState): GameState {
   const newBullets: Bullet[] = []
-  let newSnipes = [...state.snipes]
-  let newGhosts = [...state.ghosts]
-  let newHives = [...state.hives]
-  let newPlayer = { ...state.player }
+  const newSnipes = [...state.snipes]
+  const newGhosts = [...state.ghosts]
+  const newHives = [...state.hives]
+  const newPlayer = { ...state.player }
 
   for (const bullet of state.bullets) {
     const newPos = getNextPosition(bullet.pos, bullet.dir)
