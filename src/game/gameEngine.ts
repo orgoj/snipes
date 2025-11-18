@@ -224,28 +224,40 @@ function updateSnipes(state: GameState, deltaTime: number): GameState {
 
 function updateGhosts(state: GameState, deltaTime: number): GameState {
   const moveInterval = 500 // Ghosts move slower
+  const fadeDuration = 10000 // Ghosts fade away after 10 seconds
 
-  const newGhosts = state.ghosts.map((ghost) => {
-    const newGhost = { ...ghost, moveTimer: ghost.moveTimer + deltaTime }
-
-    if (newGhost.moveTimer >= moveInterval) {
-      const dx = state.player.pos.x - ghost.pos.x
-      const dy = state.player.pos.y - ghost.pos.y
-
-      const newPos = { ...ghost.pos }
-      if (Math.abs(dx) > Math.abs(dy)) {
-        newPos.x += dx > 0 ? 1 : -1
-      } else if (dy !== 0) {
-        newPos.y += dy > 0 ? 1 : -1
+  const newGhosts = state.ghosts
+    .map((ghost) => {
+      const newGhost = {
+        ...ghost,
+        moveTimer: ghost.moveTimer + deltaTime,
+        fadeTimer: ghost.fadeTimer + deltaTime,
       }
 
-      // Ghosts can pass through walls
-      newGhost.pos = newPos
-      newGhost.moveTimer = 0
-    }
+      // Remove ghost if faded away
+      if (newGhost.fadeTimer >= fadeDuration) {
+        return null
+      }
 
-    return newGhost
-  })
+      if (newGhost.moveTimer >= moveInterval) {
+        const dx = state.player.pos.x - ghost.pos.x
+        const dy = state.player.pos.y - ghost.pos.y
+
+        const newPos = { ...ghost.pos }
+        if (Math.abs(dx) > Math.abs(dy)) {
+          newPos.x += dx > 0 ? 1 : -1
+        } else if (dy !== 0) {
+          newPos.y += dy > 0 ? 1 : -1
+        }
+
+        // Ghosts can pass through walls
+        newGhost.pos = newPos
+        newGhost.moveTimer = 0
+      }
+
+      return newGhost
+    })
+    .filter((g): g is Ghost => g !== null)
 
   return { ...state, ghosts: newGhosts }
 }
@@ -272,14 +284,17 @@ function updateBullets(state: GameState): GameState {
       if (hitSnipeIndex !== -1) {
         const snipe = newSnipes[hitSnipeIndex]
         newSnipes.splice(hitSnipeIndex, 1)
-        // Create ghost
+        // Create ghost (fades away after 10 seconds)
         const ghost: Ghost = {
           id: `ghost-${Date.now()}-${Math.random()}`,
           pos: { ...snipe.pos },
           type: EntityType.GHOST,
           moveTimer: 0,
+          fadeTimer: 0,
         }
         newGhosts.push(ghost)
+        // Increment score for killing snipe
+        state = { ...state, score: state.score + 100 }
         continue // Bullet destroyed
       }
 
@@ -289,6 +304,8 @@ function updateBullets(state: GameState): GameState {
         newHives[hitHiveIndex].health--
         if (newHives[hitHiveIndex].health <= 0) {
           newHives.splice(hitHiveIndex, 1)
+          // Increment score for destroying hive
+          state = { ...state, score: state.score + 500 }
         }
         continue // Bullet destroyed
       }
@@ -320,13 +337,7 @@ function checkGameConditions(state: GameState): GameState {
     return { ...state, gameOver: true }
   }
 
-  // Check if player collides with ghost
-  const hitByGhost = state.ghosts.some((g) => g.pos.x === state.player.pos.x && g.pos.y === state.player.pos.y)
-  if (hitByGhost) {
-    return { ...state, player: { ...state.player, lives: state.player.lives - 1 } }
-  }
-
-  // Check if all hives destroyed and all snipes killed
+  // Check if all hives destroyed and all snipes killed (ghosts don't prevent winning)
   if (state.hives.length === 0 && state.snipes.length === 0) {
     return { ...state, won: true }
   }

@@ -53,6 +53,7 @@ export interface Snipe extends Entity {
 export interface Ghost extends Entity {
   type: typeof EntityType.GHOST
   moveTimer: number
+  fadeTimer: number // Ghosts fade away after 10 seconds
 }
 
 export interface Hive extends Entity {
@@ -76,8 +77,6 @@ export interface DifficultyConfig {
   snipeSpeed: number
   snipeShootRate: number
   hiveSpawnRate: number
-  electricWalls: boolean
-  reflectingBullets: boolean
 }
 
 export interface GameState {

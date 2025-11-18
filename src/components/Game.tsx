@@ -13,7 +13,7 @@ export default function Game() {
   const [screen, setScreen] = useState<GameScreen>('menu')
   const [gameState, setGameState] = useState<GameState | null>(null)
   const [settings, setSettings] = useState(loadSettings())
-  const lastUpdateRef = useRef<number>(Date.now())
+  const lastUpdateRef = useRef<number>(0)
   const moveKeysRef = useRef<Set<string>>(new Set())
   const shootKeysRef = useRef<Set<string>>(new Set())
 
@@ -35,6 +35,11 @@ export default function Game() {
   // Game loop
   useEffect(() => {
     if (screen !== 'playing' || !gameState) return
+
+    // Initialize timer on first run
+    if (lastUpdateRef.current === 0) {
+      lastUpdateRef.current = Date.now()
+    }
 
     const interval = setInterval(() => {
       const now = Date.now()
@@ -81,7 +86,7 @@ export default function Game() {
         const direction = getShootDirectionFromKeys(shootKeys)
         setGameState((prev) => (prev ? shootBullet(prev, direction) : null))
       }
-    }, 100) // Movement/shooting at 10 FPS
+    }, gameState.player.boosting ? 50 : 100) // 2x faster when boosting
 
     return () => clearInterval(moveInterval)
   }, [screen, gameState])

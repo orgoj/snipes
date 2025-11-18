@@ -15,8 +15,6 @@ export function parseDifficultyLevel(level: string): DifficultyConfig {
       snipeSpeed: 1,
       snipeShootRate: 1000,
       hiveSpawnRate: 3000,
-      electricWalls: false,
-      reflectingBullets: false,
     }
   }
 
@@ -32,8 +30,6 @@ export function parseDifficultyLevel(level: string): DifficultyConfig {
   const snipeSpeed = 1 + (combinedDifficulty / 233) * 2 // 1-3
   const snipeShootRate = 1000 - (combinedDifficulty / 233) * 500 // 1000-500ms
   const hiveSpawnRate = 3000 - (combinedDifficulty / 233) * 1500 // 3000-1500ms
-  const electricWalls = combinedDifficulty > 150
-  const reflectingBullets = combinedDifficulty > 180
 
   return {
     level,
@@ -43,8 +39,6 @@ export function parseDifficultyLevel(level: string): DifficultyConfig {
     snipeSpeed,
     snipeShootRate,
     hiveSpawnRate,
-    electricWalls,
-    reflectingBullets,
   }
 }
 

@@ -19,6 +19,10 @@ export default function Terminal({ gameState, colorScheme = 'green' }: TerminalP
       <div className={`screen ${colorScheme}`}>{screen}</div>
       <div className="hud">
         <div className="hud-item">
+          <span>SCORE:</span>
+          <span>{gameState.score}</span>
+        </div>
+        <div className="hud-item">
           <span>LIVES:</span>
           <span>{'♥'.repeat(gameState.player.lives)}</span>
         </div>
