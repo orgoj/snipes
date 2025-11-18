@@ -1,6 +1,6 @@
 interface GameSettings {
   difficulty: string
-  colorScheme: 'green' | 'amber' | 'white'
+  colorScheme: 'green' | 'amber' | 'white' | 'vga'
 }
 
 interface HighScore {

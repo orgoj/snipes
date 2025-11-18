@@ -56,6 +56,12 @@ export default function Game() {
     setIsWaitingForPlayer(false)
   }, [])
 
+  const handleColorSchemeChange = useCallback((scheme: 'green' | 'amber' | 'white' | 'vga') => {
+    const newSettings = { ...settings, colorScheme: scheme }
+    setSettings(newSettings)
+    saveSettings(newSettings)
+  }, [settings])
+
   const hostGame = useCallback(
     async (difficulty: string) => {
       try {
@@ -208,20 +214,23 @@ export default function Game() {
       }
 
       // Guest: Send Player 2 inputs to host (using primary control scheme)
-      if (gameState.gameMode === GameMode.COOP_GUEST && multiplayerManagerRef.current) {
-        const guestMoveKeys = Array.from(moveKeysRef.current)
-        const guestShootKeys = Array.from(shootKeysRef.current)
-        if (guestMoveKeys.length > 0 || guestShootKeys.length > 0) {
-          const moveDir = guestMoveKeys.length > 0 ? getDirectionFromKeys(guestMoveKeys) : Direction.NONE
-          const shootDir = guestShootKeys.length > 0 ? getShootDirectionFromKeys(guestShootKeys) : Direction.NONE
-          const boosting = guestMoveKeys.includes(' ')
-          multiplayerManagerRef.current.sendPlayerInput(moveDir, shootDir, boosting)
+      setGameState((prev) => {
+        if (prev?.gameMode === GameMode.COOP_GUEST && multiplayerManagerRef.current) {
+          const guestMoveKeys = Array.from(moveKeysRef.current)
+          const guestShootKeys = Array.from(shootKeysRef.current)
+          if (guestMoveKeys.length > 0 || guestShootKeys.length > 0) {
+            const moveDir = guestMoveKeys.length > 0 ? getDirectionFromKeys(guestMoveKeys) : Direction.NONE
+            const shootDir = guestShootKeys.length > 0 ? getShootDirectionFromKeys(guestShootKeys) : Direction.NONE
+            const boosting = guestMoveKeys.includes(' ')
+            multiplayerManagerRef.current.sendPlayerInput(moveDir, shootDir, boosting)
+          }
         }
-      }
-    }, gameState.player.boosting ? 50 : 100) // 2x faster when boosting
+        return prev
+      })
+    }, 100)
 
     return () => clearInterval(moveInterval)
-  }, [screen, gameState])
+  }, [screen])
 
   // Keyboard input
   useEffect(() => {
@@ -303,6 +312,8 @@ export default function Game() {
           onCancelWait={returnToMenu}
           roomCode={roomCode}
           isWaitingForPlayer={isWaitingForPlayer}
+          colorScheme={settings.colorScheme}
+          onColorSchemeChange={handleColorSchemeChange}
         />
       )}
 
@@ -314,6 +325,8 @@ export default function Game() {
           onCancelWait={returnToMenu}
           roomCode={roomCode}
           isWaitingForPlayer={isWaitingForPlayer}
+          colorScheme={settings.colorScheme}
+          onColorSchemeChange={handleColorSchemeChange}
         />
       )}
 

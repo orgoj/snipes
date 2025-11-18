@@ -9,6 +9,8 @@ interface MenuProps {
   onCancelWait?: () => void
   roomCode?: string | null
   isWaitingForPlayer?: boolean
+  colorScheme?: 'green' | 'amber' | 'white' | 'vga'
+  onColorSchemeChange?: (scheme: 'green' | 'amber' | 'white' | 'vga') => void
 }
 
 export default function Menu({
@@ -17,11 +19,13 @@ export default function Menu({
   onJoinGame,
   onCancelWait,
   roomCode,
-  isWaitingForPlayer = false
+  isWaitingForPlayer = false,
+  colorScheme = 'green',
+  onColorSchemeChange
 }: MenuProps) {
-  const [showDifficulty, setShowDifficulty] = useState(false)
   const [showMultiplayer, setShowMultiplayer] = useState(false)
   const [showJoinInput, setShowJoinInput] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [selectedDifficulty, setSelectedDifficulty] = useState('A1')
   const [joinRoomCode, setJoinRoomCode] = useState('')
 
@@ -126,7 +130,7 @@ export default function Menu({
         ╚═══════════════════════════╝
       </h1>
 
-      {!showDifficulty && !showMultiplayer ? (
+      {!showMultiplayer && !showSettings ? (
         <div className="menu-options">
           <button className="menu-button" onClick={handleStart}>
             START SOLO GAME
@@ -134,9 +138,71 @@ export default function Menu({
           <button className="menu-button" onClick={() => setShowMultiplayer(true)}>
             CO-OP MODE
           </button>
-          <button className="menu-button" onClick={() => setShowDifficulty(true)}>
-            SELECT DIFFICULTY
+          <button className="menu-button" onClick={() => setShowSettings(true)}>
+            SETTINGS
           </button>
+        </div>
+      ) : showSettings ? (
+        <div>
+          <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>SETTINGS</h2>
+
+          <div style={{ marginBottom: '30px' }}>
+            <h3 style={{ textAlign: 'center', marginBottom: '10px', fontSize: '16px' }}>DIFFICULTY</h3>
+            <p style={{ textAlign: 'center', fontSize: '12px', marginBottom: '10px' }}>
+              Current: {selectedDifficulty}
+            </p>
+            <div className="difficulty-selector">
+              {difficulties.map((diff) => (
+                <button
+                  key={diff}
+                  className={`difficulty-button ${selectedDifficulty === diff ? 'selected' : ''}`}
+                  onClick={() => setSelectedDifficulty(diff)}
+                >
+                  {diff}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{ textAlign: 'center', marginBottom: '10px', fontSize: '16px' }}>DISPLAY MODE</h3>
+            <div className="menu-options">
+              <button
+                className={`menu-button ${colorScheme === 'vga' ? 'selected' : ''}`}
+                onClick={() => onColorSchemeChange?.('vga')}
+                style={colorScheme === 'vga' ? { background: '#00ff00', color: '#000' } : {}}
+              >
+                VGA (Classic Snipes)
+              </button>
+              <button
+                className={`menu-button ${colorScheme === 'green' ? 'selected' : ''}`}
+                onClick={() => onColorSchemeChange?.('green')}
+                style={colorScheme === 'green' ? { background: '#00ff00', color: '#000' } : {}}
+              >
+                Green Phosphor
+              </button>
+              <button
+                className={`menu-button ${colorScheme === 'amber' ? 'selected' : ''}`}
+                onClick={() => onColorSchemeChange?.('amber')}
+                style={colorScheme === 'amber' ? { background: '#00ff00', color: '#000' } : {}}
+              >
+                Amber Monitor
+              </button>
+              <button
+                className={`menu-button ${colorScheme === 'white' ? 'selected' : ''}`}
+                onClick={() => onColorSchemeChange?.('white')}
+                style={colorScheme === 'white' ? { background: '#00ff00', color: '#000' } : {}}
+              >
+                White Terminal
+              </button>
+            </div>
+          </div>
+
+          <div className="menu-options">
+            <button className="menu-button" onClick={() => setShowSettings(false)}>
+              BACK
+            </button>
+          </div>
         </div>
       ) : showMultiplayer ? (
         <div className="menu-options">
@@ -154,33 +220,7 @@ export default function Menu({
             BACK
           </button>
         </div>
-      ) : (
-        <div>
-          <h2 style={{ textAlign: 'center', marginBottom: '10px' }}>SELECT DIFFICULTY (A1-Z9)</h2>
-          <p style={{ textAlign: 'center', fontSize: '12px', marginBottom: '10px' }}>
-            Current: {selectedDifficulty}
-          </p>
-          <div className="difficulty-selector">
-            {difficulties.map((diff) => (
-              <button
-                key={diff}
-                className={`difficulty-button ${selectedDifficulty === diff ? 'selected' : ''}`}
-                onClick={() => setSelectedDifficulty(diff)}
-              >
-                {diff}
-              </button>
-            ))}
-          </div>
-          <div className="menu-options">
-            <button className="menu-button" onClick={handleStart}>
-              START
-            </button>
-            <button className="menu-button" onClick={() => setShowDifficulty(false)}>
-              BACK
-            </button>
-          </div>
-        </div>
-      )}
+      ) : null}
 
       <div className="controls-help">
         <p>
