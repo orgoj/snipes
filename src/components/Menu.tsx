@@ -92,9 +92,9 @@ export default function Menu({
           <input
             type="text"
             value={joinRoomCode}
-            onChange={(e) => setJoinRoomCode(e.target.value.toUpperCase())}
-            placeholder="ABC123"
-            maxLength={20}
+            onChange={(e) => setJoinRoomCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+            placeholder="ABCD12"
+            maxLength={6}
             style={{
               width: '100%',
               padding: '10px',
@@ -104,7 +104,7 @@ export default function Menu({
               border: '2px solid #00ff00',
               color: '#00ff00',
               fontFamily: 'Courier New, monospace',
-              letterSpacing: '0.2em',
+              letterSpacing: '0.3em',
             }}
           />
         </div>

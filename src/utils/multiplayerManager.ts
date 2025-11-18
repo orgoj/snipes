@@ -27,16 +27,32 @@ export class MultiplayerManager {
   private onDisconnected: (() => void) | null = null
   private isHost: boolean = false
 
-  constructor() {
-    // Initialize with random ID for PeerJS
-    this.peer = new Peer({
+  // Generate a short 6-character alphanumeric code
+  private generateShortCode(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // Removed confusing chars: 0, O, I, 1
+    let code = ''
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return code
+  }
+
+  private createPeer(customId?: string) {
+    const config = {
       config: {
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
           { urls: 'stun:stun1.l.google.com:19302' },
         ],
       },
-    })
+    }
+
+    // Create peer with custom ID if provided (for host)
+    if (customId) {
+      this.peer = new Peer(`snipes-${customId.toLowerCase()}`, config)
+    } else {
+      this.peer = new Peer(config)
+    }
 
     // Add error handler for peer initialization
     this.peer.on('error', (error) => {
@@ -47,14 +63,23 @@ export class MultiplayerManager {
     })
   }
 
+  constructor() {
+    // Don't create peer in constructor - wait for host/join
+  }
+
   // Host creates a room and waits for guest
   async hostGame(onConnected: () => void): Promise<string> {
     this.isHost = true
     this.onConnected = onConnected
 
-    return new Promise((resolve) => {
-      this.peer!.on('open', (id) => {
-        const roomCode = this.generateRoomCode(id)
+    // Generate a short 6-character room code
+    const roomCode = this.generateShortCode()
+
+    // Create peer with the room code as ID
+    this.createPeer(roomCode)
+
+    return new Promise((resolve, reject) => {
+      this.peer!.on('open', () => {
         resolve(roomCode)
 
         this.peer!.on('connection', (conn) => {
@@ -62,6 +87,23 @@ export class MultiplayerManager {
           this.setupConnection()
         })
       })
+
+      this.peer!.on('error', (error) => {
+        // If the ID is taken, generate a new one
+        if (error.type === 'unavailable-id') {
+          const newCode = this.generateShortCode()
+          this.createPeer(newCode)
+          this.peer!.on('open', () => {
+            resolve(newCode)
+            this.peer!.on('connection', (conn) => {
+              this.connection = conn
+              this.setupConnection()
+            })
+          })
+        }
+      })
+
+      setTimeout(() => reject(new Error('Host timeout')), 10000)
     })
   }
 
@@ -70,9 +112,13 @@ export class MultiplayerManager {
     this.isHost = false
     this.onConnected = onConnected
 
+    // Create peer for guest (no custom ID needed)
+    this.createPeer()
+
     return new Promise((resolve, reject) => {
       this.peer!.on('open', () => {
-        const peerId = this.decodeRoomCode(roomCode)
+        // Convert room code to peer ID (add prefix and lowercase)
+        const peerId = `snipes-${roomCode.toLowerCase()}`
         this.connection = this.peer!.connect(peerId)
         this.setupConnection()
         resolve()
@@ -158,16 +204,6 @@ export class MultiplayerManager {
     this.onDisconnected = callback
   }
 
-  // Use peer ID directly as room code (no hashing needed)
-  private generateRoomCode(peerId: string): string {
-    // Return peer ID directly - PeerJS IDs are short enough to share
-    return peerId.toUpperCase()
-  }
-
-  private decodeRoomCode(roomCode: string): string {
-    // Room code IS the peer ID (just uppercased by UI)
-    return roomCode.toLowerCase()
-  }
 
   disconnect() {
     if (this.connection) {
