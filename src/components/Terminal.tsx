@@ -73,5 +73,10 @@ function renderGameState(state: GameState): string {
   // Place player (on top)
   grid[state.player.pos.y][state.player.pos.x] = EntityType.PLAYER
 
+  // Place player 2 (if multiplayer)
+  if (state.player2) {
+    grid[state.player2.pos.y][state.player2.pos.x] = EntityType.PLAYER2
+  }
+
   return grid.map((row) => row.join('')).join('\n')
 }

@@ -1,12 +1,13 @@
-import type { GameState, Player, Snipe, Ghost, Hive, Bullet } from './types'
-import { EntityType, Direction } from './types'
+import type { GameState, Player, Snipe, Ghost, Hive, Bullet, GameMode } from './types'
+import { EntityType, Direction, GameMode as GameModeEnum } from './types'
 import { generateMaze, isWalkable, findEmptyPosition } from './mazeGenerator'
 import { parseDifficultyLevel } from './difficulty'
 
 export function createInitialGameState(
   width: number,
   height: number,
-  difficultyLevel: string = 'A1'
+  difficultyLevel: string = 'A1',
+  gameMode: GameMode = GameModeEnum.SOLO
 ): GameState {
   const difficulty = parseDifficultyLevel(difficultyLevel)
   const maze = generateMaze(width, height)
@@ -27,6 +28,23 @@ export function createInitialGameState(
     boosting: false,
   }
 
+  // Create player 2 for multiplayer
+  let player2: Player | null = null
+  if (gameMode !== GameModeEnum.SOLO) {
+    const player2Pos = findEmptyPosition(maze, width, height, occupiedPositions)
+    if (player2Pos) {
+      occupiedPositions.push(player2Pos)
+      player2 = {
+        id: 'player2',
+        pos: player2Pos,
+        type: EntityType.PLAYER2,
+        lives: difficulty.lives,
+        speed: 1,
+        boosting: false,
+      }
+    }
+  }
+
   // Create hives
   const hives: Hive[] = []
   for (let i = 0; i < difficulty.hives; i++) {
@@ -45,6 +63,7 @@ export function createInitialGameState(
 
   return {
     player,
+    player2,
     snipes: [],
     ghosts: [],
     hives,
@@ -57,6 +76,7 @@ export function createInitialGameState(
     gameOver: false,
     won: false,
     enemyCount: 0,
+    gameMode,
   }
 }
 
@@ -95,6 +115,57 @@ export function shootBullet(state: GameState, direction: Direction): GameState {
   const bullet: Bullet = {
     id: `bullet-${Date.now()}-${Math.random()}`,
     pos: { ...state.player.pos },
+    type: EntityType.PLAYER_BULLET,
+    dir: direction,
+    speed: 2,
+    fromPlayer: true,
+  }
+
+  return {
+    ...state,
+    bullets: [...state.bullets, bullet],
+  }
+}
+
+// Player 2 movement
+export function movePlayer2(
+  state: GameState,
+  direction: Direction,
+  boosting: boolean = false
+): GameState {
+  if (!state.player2) return state
+
+  const { player2, maze, width, height } = state
+  const newPos = getNextPosition(player2.pos, direction)
+
+  if (!isWalkable(maze, newPos.x, newPos.y, width, height)) {
+    return state
+  }
+
+  // Check collision with ghosts
+  const hitGhost = state.ghosts.some((g) => g.pos.x === newPos.x && g.pos.y === newPos.y)
+  if (hitGhost) {
+    return state
+  }
+
+  return {
+    ...state,
+    player2: {
+      ...player2,
+      pos: newPos,
+      boosting,
+      speed: boosting ? 2 : 1,
+    },
+  }
+}
+
+// Player 2 shooting
+export function shootBulletPlayer2(state: GameState, direction: Direction): GameState {
+  if (direction === Direction.NONE || !state.player2) return state
+
+  const bullet: Bullet = {
+    id: `bullet-${Date.now()}-${Math.random()}`,
+    pos: { ...state.player2.pos },
     type: EntityType.PLAYER_BULLET,
     dir: direction,
     speed: 2,

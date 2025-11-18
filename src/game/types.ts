@@ -14,6 +14,7 @@ export const EntityType = {
   EMPTY: ' ',
   WALL: '█',
   PLAYER: '@',
+  PLAYER2: '#',
   SNIPE: 'S',
   GHOST: 'G',
   HIVE: 'H',
@@ -79,8 +80,17 @@ export interface DifficultyConfig {
   hiveSpawnRate: number
 }
 
+export const GameMode = {
+  SOLO: 'SOLO',
+  COOP_HOST: 'COOP_HOST',
+  COOP_GUEST: 'COOP_GUEST',
+} as const
+
+export type GameMode = (typeof GameMode)[keyof typeof GameMode]
+
 export interface GameState {
   player: Player
+  player2: Player | null // For multiplayer mode
   snipes: Snipe[]
   ghosts: Ghost[]
   hives: Hive[]
@@ -93,4 +103,5 @@ export interface GameState {
   gameOver: boolean
   won: boolean
   enemyCount: number
+  gameMode: GameMode
 }
